@@ -25,7 +25,11 @@ def find_text_files(directory):
 def send_file_to_server(file_path, server_url):
     with open(file_path, 'rb') as file:
         response = requests.post(
-            server_url, files={'file': file}, data={'path': file_path})
+            server_url+'/upload', files={'file': file}, data={'path': file_path})
+        if response.status_code == 200:
+            print('code: 200, file:', file_path)
+        else:
+            print('code:', response.status_code, ', file:', file_path)
     return response.status_code
 
 
