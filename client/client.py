@@ -6,30 +6,31 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 # Load configuration
-with open('./config.json', 'r') as config_file:
+with open("./config.json", "r") as config_file:
     config = json.load(config_file)
 
-directory_to_monitor = config['directory_to_monitor']
-server_url = config['server_url']
+directory_to_monitor = config["directory_to_monitor"]
+server_url = config["server_url"]
 
 
 def find_text_files(directory):
     text_files = []
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith(('.pdf', '.doc', '.txt')):
+            if file.endswith((".pdf", ".doc", ".txt")):
                 text_files.append(os.path.join(root, file))
     return text_files
 
 
 def send_file_to_server(file_path, server_url):
-    with open(file_path, 'rb') as file:
+    with open(file_path, "rb") as file:
         response = requests.post(
-            server_url+'/upload', files={'file': file}, data={'path': file_path})
+            server_url + "/upload", files={"file": file}, data={"path": file_path}
+        )
         if response.status_code == 200:
-            print('code: 200, file:', file_path)
+            print("code: 200, file:", file_path)
         else:
-            print('code:', response.status_code, ', file:', file_path)
+            print("code:", response.status_code, ", file:", file_path)
     return response.status_code
 
 
@@ -38,7 +39,7 @@ class FileChangeHandler(FileSystemEventHandler):
         self.server_url = server_url
 
     def on_modified(self, event):
-        if event.src_path.endswith(('.pdf', '.doc', '.txt')):
+        if event.src_path.endswith((".pdf", ".doc", ".docx", ".txt")):
             send_file_to_server(event.src_path, self.server_url)
 
 
