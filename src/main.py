@@ -1,4 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 import json
 import gridfs
 import file_processor
@@ -7,6 +9,7 @@ import nltk
 import ai_feature
 from bson import ObjectId
 from fastapi.encoders import jsonable_encoder
+import os
 
 
 class JSONEncoder(json.JSONEncoder):
@@ -20,6 +23,9 @@ nltk.download("stopwords")
 nltk.download("punkt_tab")
 
 app = FastAPI()
+
+app.mount(
+    "/static", StaticFiles(directory=os.getcwd().removesuffix('\\src') + '\\'), name="static")
 
 client = MongoClient("mongodb://localhost:27017/")
 db = client["SearchingProfiles"]
@@ -42,23 +48,28 @@ def document_to_json(document):
     return document
 
 
+@app.get("/", response_class=FileResponse)
+async def read_index():
+    return FileResponse(os.getcwd().removesuffix('\\src') + "\\index.html")
+
+
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...), path: str = Form(...)):
-    raw_text_dict = file_processor.get_raw_text(file.file, path)
+async def upload_file(file: UploadFile = File(...), file_url: str = Form(...)):
+    raw_text_dict = file_processor.get_raw_text(file.file, file_url)
     if not raw_text_dict:
         raise HTTPException(status_code=400, detail="Failed to process file")
     # Store file in GridFS
-    file_id = fs.put(file.file, filename=file.filename, path=path)
+    file_id = fs.put(file.file, filename=file.filename, url=file_url)
     # Store metadata in 'documents' collection
     db["documents"].insert_one(
         {
             "file_id": file_id,
-            "filename": file.filename,
-            "path": path,
+            "filename": file_url.split('/')[-1],
+            "file_url": file_url,
             "raw_text": raw_text_dict,
         }
     )
-    return {"filename": file.filename, "path": path, "file_id": str(file_id)}
+    return {"filename": file.filename, "file_url": file_url, "file_id": str(file_id)}
 
 
 @app.get("/find")

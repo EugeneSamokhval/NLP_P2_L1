@@ -4,43 +4,27 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 import fitz  # PyMuPDF
 from docx import Document
+from docx.opc.exceptions import PackageNotFoundError
+import re
+
+
+def find_all_indexes(input_str, substring):
+    return [match.start() for match in re.finditer(re.escape(substring), input_str)]
 
 
 def get_raw_text(file, path: str):
     stop_words = set(stopwords.words("english"))
 
     def process_text(text):
+        print('working on file:', path)
         words = word_tokenize(text)
         filtered_words = [
-            {"word": word, "count": words.count(word)}
+            {"word": word, "pos": find_all_indexes(text, word)}
             for word in words
             if word.lower() not in stop_words
         ]
+        print('finihed working on file:', path)
         return filtered_words
 
-    if path.endswith(".txt"):
-        filecontent = file.read()
-        return process_text(filecontent.decode("utf-8"))
-
-    elif path.endswith(".pdf"):
-        with tempfile.TemporaryFile() as temp_pdf:
-            temp_pdf.write(file.read())
-            temp_pdf.seek(0)
-            doc = fitz.open(stream=temp_pdf.read(), filetype="pdf")
-            text = ""
-            for page in doc:
-                text += page.get_text()
-        return process_text(text)
-
-    elif path.endswith(".docx") or path.endswith(".doc"):
-        with tempfile.TemporaryFile() as temp_docx:
-            temp_docx.write(file.read())
-            temp_docx.seek(0)
-            doc = Document(temp_docx)
-            text = ""
-            for paragraph in doc.paragraphs:
-                text += paragraph.text + "\n"
-        return process_text(text)
-
-    else:
-        raise ValueError("Unsupported file type")
+    filecontent = file.read()
+    return process_text(filecontent.decode("utf-8"))
