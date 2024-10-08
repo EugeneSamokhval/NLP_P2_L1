@@ -47,3 +47,19 @@ body{
     width: 100%;
     background-color: #16163a;
 }
+#PopUpWindow{
+    display: none;
+    background-color: rgb(12, 33, 51);
+    font-size: 64px;
+    color: antiquewhite;
+    position: fixed;
+    top: 12.5vh;
+    left: 12.5vw;
+    border-radius: 35px;
+    height: 75vh;
+    padding: 25px;
+    width: 75vw;
+    text-align: center;
+    z-index: 9999;
+    overflow: auto;
+}

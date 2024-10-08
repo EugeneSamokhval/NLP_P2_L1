@@ -1,4 +1,5 @@
 {
-    "host": "localhost",
-    "port": 2000 
+    "host": "0.0.0.0",
+    "local_addres": "192.168.31.32",
+    "port": 8000 
 }

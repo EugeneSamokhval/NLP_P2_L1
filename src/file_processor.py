@@ -2,9 +2,6 @@ import tempfile
 import json
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-import fitz  # PyMuPDF
-from docx import Document
-from docx.opc.exceptions import PackageNotFoundError
 import re
 
 
