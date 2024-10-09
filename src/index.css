@@ -42,6 +42,7 @@ body{
     border-width: 5px;
     border-color: white;
     position: fixed;
+    text-align: center;
     top: 40%;
     color: wheat;
     width: 100%;
@@ -58,8 +59,19 @@ body{
     border-radius: 35px;
     height: 75vh;
     padding: 25px;
+    padding-top: 75px;
     width: 75vw;
     text-align: center;
     z-index: 9999;
     overflow: auto;
+}
+#CloseHelpButton{
+    background-color: #bb2222;
+    position: fixed;
+    top: 13vh;
+    right: 11vw;
+    border-width: 0px;
+    width: 75px;
+    height: 75px;
+    border-radius: 25%;
 }

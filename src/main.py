@@ -1,6 +1,8 @@
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.encoders import jsonable_encoder
 import json
 import gridfs
 import file_processor
@@ -8,7 +10,6 @@ from pymongo import MongoClient, errors
 import nltk
 import ai_feature
 from bson import ObjectId
-from fastapi.encoders import jsonable_encoder
 import os
 
 
@@ -23,7 +24,14 @@ nltk.download("stopwords")
 nltk.download("punkt_tab")
 
 app = FastAPI()
-
+app.add_middleware(
+    CORSMiddleware,
+    # Разрешить все источники, можно указать конкретные домены
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],  # Разрешить все методы
+    allow_headers=["*"],  # Разрешить все заголовки
+)
 app.mount(
     "/static", StaticFiles(directory=os.getcwd().removesuffix('\\src') + '\\'), name="static")
 
@@ -92,21 +100,19 @@ async def upload_file(file: UploadFile = File(...), file_path: str = Form(...)):
 @app.get("/find")
 async def find_file(user_input: str):
     try:
-        include_terms, exclude_terms = ai_feature.parse_query(user_input)
-
-        include_query = {"raw_text": {
+        include_terms = ai_feature.parse_query(user_input)
+        query = {"raw_text": {
             "$elemMatch": {"word": {"$in": include_terms}}}}
-
-        if exclude_terms:
-            exclude_query = {"raw_text.word": {"$nin": exclude_terms}}
-            query = {"$and": [include_query, exclude_query]}
-        else:
-            query = include_query
         results = db["documents"].find(query)
         file_metadata_list = [document_to_json(doc) for doc in results]
         for entry in file_metadata_list:
             entry['raw_text'] = [found_entry for found_entry in entry.get(
                 'raw_text') if is_word_correct(found_entry.values(), include_terms)]
+        list_of_files = [(entry['filename'], [
+            snippet['pos'] for snippet in entry['raw_text'] if type(snippet['pos']) == list]) for entry in file_metadata_list]
+        best_snippets = ai_feature.get_best_snippet(list_of_files, user_input)
+        for entry in file_metadata_list:
+            entry['raw_text'] = best_snippets[entry['filename']]
         return jsonable_encoder(file_metadata_list)
 
     except errors.PyMongoError as e:

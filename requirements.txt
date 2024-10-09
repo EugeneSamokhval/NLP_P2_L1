@@ -1,0 +1,8 @@
+fastapi
+requests
+watchdog
+pymongo
+nltk
+spacy
+sentence-transformers
+gridfs

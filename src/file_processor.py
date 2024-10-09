@@ -1,5 +1,3 @@
-import tempfile
-import json
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 import re
