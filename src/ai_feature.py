@@ -51,8 +51,11 @@ def get_best_snippet(file_names: list[str, list[int]], user_request: str):
         list_of_snippets = []
         for coordinates_list in pair[1]:
             for coordinates in coordinates_list:
-                list_of_snippets.append(get_surrounding_text(os.getcwd().removesuffix('\\src') +
-                                                             '\\storage\\' + pair[0], coordinates))
+                if list_of_snippets <= 10:
+                    list_of_snippets.append(get_surrounding_text(os.getcwd().removesuffix('\\src') +
+                                                                 '\\storage\\' + pair[0], coordinates))
+                else:
+                    break
         list_of_weights = list(compare_results(list_of_snippets, user_request))
         best_values[pair[0]] = list_of_snippets[list_of_weights.index(
             max(list_of_weights))]
