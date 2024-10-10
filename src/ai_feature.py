@@ -51,7 +51,7 @@ def get_best_snippet(file_names: list[str, list[int]], user_request: str):
         list_of_snippets = []
         for coordinates_list in pair[1]:
             for coordinates in coordinates_list:
-                if list_of_snippets <= 10:
+                if len(list_of_snippets) <= 10:
                     list_of_snippets.append(get_surrounding_text(os.getcwd().removesuffix('\\src') +
                                                                  '\\storage\\' + pair[0], coordinates))
                 else:

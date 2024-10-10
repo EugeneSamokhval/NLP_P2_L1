@@ -10,7 +10,21 @@ from pymongo import MongoClient, errors
 import nltk
 import ai_feature
 from bson import ObjectId
+import logging
+import metrics
 import os
+
+logging.basicConfig(
+    level=logging.INFO,  # Set the log level
+    # Set the log format
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("fastapi.log"),  # Log to a file
+        logging.StreamHandler()  # Log to the console
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 
 class JSONEncoder(json.JSONEncoder):
@@ -76,25 +90,58 @@ async def read_index():
 async def upload_file(file: UploadFile = File(...), file_path: str = Form(...)):
     file.file.seek(0)
     raw_text_dict = file_processor.get_raw_text(file.file, file_path)
+
     if not raw_text_dict:
         raise HTTPException(status_code=400, detail="Failed to process file")
-    # Store file in GridFS
-    file_id = fs.put(file.file, filename=file.filename, url=file_path)
-    with open(os.getcwd().removesuffix(
-            '\\src')+'\\storage\\' + file_path.split('\\')[-1], 'w') as current_file:
+
+    # Check if the document already exists based on the file path or name
+    existing_doc = db["documents"].find_one(
+        {"filename": file_path.split('\\')[-1]})
+
+    # If document exists, we overwrite it
+    if existing_doc:
+        # Get the existing file ID to remove the old version in GridFS
+        existing_file_id = existing_doc.get("file_id")
+
+        # Remove old file from GridFS
+        if existing_file_id:
+            fs.delete(ObjectId(existing_file_id))
+
+        # Store the new file in GridFS
+        file_id = fs.put(file.file, filename=file.filename, url=file_path)
+
+        # Update the existing document with the new file and metadata
+        db["documents"].update_one(
+            {"_id": existing_doc["_id"]},  # Query to find the document
+            {
+                "$set": {
+                    "file_id": file_id,
+                    "file_path": str(config['local_addres'] + ':' + str(config['port']) + '/storage/?file_path=' + file_path.split('\\')[-1]).replace('/', '\\'),
+                    "raw_text": raw_text_dict,
+                }
+            }
+        )
+        message = "Document updated successfully"
+    else:
+        # If the document does not exist, we insert a new one
+        file_id = fs.put(file.file, filename=file.filename, url=file_path)
+        db["documents"].insert_one(
+            {
+                "file_id": file_id,
+                "filename": file_path.split('\\')[-1],
+                "file_path": str(config['local_addres'] + ':' + str(config['port']) + '/storage/?file_path=' + file_path.split('\\')[-1]).replace('/', '\\'),
+                "raw_text": raw_text_dict,
+            }
+        )
+        message = "Document uploaded successfully"
+
+    # Save the file to local storage
+    with open(os.getcwd().removesuffix('\\src') + '\\storage\\' + file_path.split('\\')[-1], 'w') as current_file:
         openable_file = file.file
         openable_file.seek(0)
         current_file.write(openable_file.read().decode('utf-8'))
-    # Store metadata in 'documents' collection
-    db["documents"].insert_one(
-        {
-            "file_id": file_id,
-            "filename": file_path.split('\\')[-1],
-            "file_path": config['local_addres']+':'+str(config['port'])+'/storage/?file_path='+file_path.split('\\')[-1],
-            "raw_text": raw_text_dict,
-        }
-    )
-    return {"filename": file.filename, "file_path": file_path, "file_id": str(file_id)}
+
+    return {"filename": file.filename, "file_path": file_path, "message": message}
 
 
 @app.get("/find")
@@ -113,6 +160,7 @@ async def find_file(user_input: str):
         best_snippets = ai_feature.get_best_snippet(list_of_files, user_input)
         for entry in file_metadata_list:
             entry['raw_text'] = best_snippets[entry['filename']]
+        await metrics.calculate_metrics(file_metadata_list, user_input)
         return jsonable_encoder(file_metadata_list)
 
     except errors.PyMongoError as e:

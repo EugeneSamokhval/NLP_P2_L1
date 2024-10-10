@@ -1,0 +1,5 @@
+Recall:1.0
+Precision:1.0
+Accuracy:1.0
+Error:0.0
+F_measure:1.0

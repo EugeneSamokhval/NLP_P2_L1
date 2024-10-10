@@ -7,7 +7,7 @@ const help_button = document.getElementById('HelpButton')
 const pop_up_window = document.getElementById('PopUpWindow')
 const close_pop_up_button = document.getElementById('CloseHelpButton')
 
-const server_ip = 'http://192.168.31.32:8000'
+const server_ip = 'http://172.17.99.94:8000'
 
 function getSurroundingString(str, position) {
     if (position < 0 || position >= str.length) {
